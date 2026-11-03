@@ -41,12 +41,15 @@ struct Binding
 
 static uint8_t g_state[kStateSize];
 static CRITICAL_SECTION g_stateLock;
+static CRITICAL_SECTION g_logLock;
 static FILE* g_log;
 
 static void Log(const char* format, ...)
 {
 	if (g_log == nullptr)
 		return;
+
+	EnterCriticalSection(&g_logLock);
 
 	SYSTEMTIME now;
 	GetLocalTime(&now);
@@ -59,6 +62,8 @@ static void Log(const char* format, ...)
 
 	fputc('\n', g_log);
 	fflush(g_log);
+
+	LeaveCriticalSection(&g_logLock);
 }
 
 static std::string SiblingPath(const char* fileName)
@@ -460,6 +465,7 @@ static DWORD ArgOr(int argc, char* argv[], int position, DWORD fallback)
 
 int main(int argc, char* argv[])
 {
+	InitializeCriticalSection(&g_logLock);
 	g_log = fopen(SiblingPath("OpenParrotInput.log").c_str(), "w");
 
 	InitializeCriticalSection(&g_stateLock);

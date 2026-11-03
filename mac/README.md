@@ -2,7 +2,7 @@
 
 These scripts run OpenParrot games on Apple Silicon Macs through CrossOver. This is experimental, and it has only been tested with one game, Dark Awake (32-bit, D3D8), on CrossOver 26.3 and macOS 27.
 
-Not tested: gamepads, 64-bit games, newer Direct3D versions, Player 2 controls, and peripherals such as force feedback and card readers.
+Gamepad input has been tested with one USB controller, which CrossOver presented through XInput. Not tested: other controllers, 64-bit games, newer Direct3D versions, Player 2 controls, and peripherals such as force feedback and card readers.
 
 ## What you need
 
@@ -42,7 +42,7 @@ Click the game window so it has focus. Close it with its red button. Only run on
 | Test mode | T | |
 | Test or service | Y, U | |
 
-Connect a gamepad before or during play. The helper uses the first one it finds. Other controllers may number their buttons differently.
+Connect a gamepad before or during play. The helper uses the first one it finds and doesn't read analog triggers. Controllers that don't appear through XInput may number their buttons differently.
 
 ## Why each piece is needed
 
