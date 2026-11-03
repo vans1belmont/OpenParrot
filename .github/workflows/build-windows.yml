@@ -26,12 +26,14 @@ jobs:
         run: .\premake5.exe vs2019
 
       - name: Build
-        run: >
-          msbuild OpenParrot.sln
-          /m
-          /p:Configuration=Release
-          /p:Platform=${{ matrix.platform }}
-          /p:PlatformToolset=v143
+        run: |
+          msbuild OpenParrot.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143 "/flp:logfile=msbuild-errors.log;errorsonly"
+          $code = $LASTEXITCODE
+          # Job logs require sign-in, so publish errors as annotations on the run page.
+          if (Test-Path msbuild-errors.log) {
+            Get-Content msbuild-errors.log | Sort-Object -Unique | Select-Object -First 10 | ForEach-Object { "::error::$_" }
+          }
+          exit $code
 
       - uses: actions/upload-artifact@v4
         with:
