@@ -1,0 +1,40 @@
+name: Build Windows binaries
+
+on:
+  push:
+    branches: [mac-port]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x86, x64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      # The bundled premake5.exe (5.0.0-alpha14) only knows up to vs2019, so
+      # generate that format and build it with the runner's v143 toolset.
+      - name: Generate solution
+        run: .\premake5.exe vs2019
+
+      - name: Build
+        run: >
+          msbuild OpenParrot.sln
+          /m
+          /p:Configuration=Release
+          /p:Platform=${{ matrix.platform }}
+          /p:PlatformToolset=v143
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenParrot-${{ matrix.platform }}
+          path: build/bin/release/output/
+          if-no-files-found: error
