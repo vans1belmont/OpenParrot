@@ -9,6 +9,22 @@ namespace
 {
 	volatile LONG enEinsFastIoCallCount = 0;
 
+	// Wine's Mac driver only delivers key and window events to a thread that
+	// pumps messages, and these games stop pumping once their window is up.
+	void PumpWindowMessages()
+	{
+		static const bool enabled = getenv("TP_PUMP_MESSAGES") != nullptr;
+		if (!enabled)
+			return;
+
+		MSG msg;
+		while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessageA(&msg);
+		}
+	}
+
 	bool IsEnEinsFastIoDiagnosticsEnabled()
 	{
 		char value[8] = {};
@@ -116,6 +132,7 @@ int __cdecl iDmacDrvRegisterRead(int DeviceId, DWORD CommandCode, LPVOID OutBuff
 		}
 		break;
 	case 0x4120: // Player 1 and 2 controls
+		PumpWindowMessages();
 		result = g_fastIOValues[0] + ((DWORD)g_fastIOValues[1] * 0x100) + ((DWORD)g_fastIOValues[2] * 0x10000) + ((DWORD)g_fastIOValues[3] * 0x1000000);
 		break;
 	case 0x4124: // Analogs 1
