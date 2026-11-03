@@ -13,6 +13,8 @@ project "OpenParrotInput"
 
 	includedirs { "src" }
 
+	links { "winmm" }
+
 	prebuildcommands {
 		"if not exist $(TargetDir)output mkdir $(TargetDir)output",
 	}

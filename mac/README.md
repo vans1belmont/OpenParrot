@@ -2,7 +2,7 @@
 
 These scripts run OpenParrot games on Apple Silicon Macs through CrossOver. This is experimental, and it has only been tested with one game, Dark Awake (32-bit, D3D8), on CrossOver 26.3 and macOS 27.
 
-Not tested: 64-bit games, newer Direct3D versions, Player 2 controls, and peripherals such as force feedback and card readers.
+Not tested: gamepads, 64-bit games, newer Direct3D versions, Player 2 controls, and peripherals such as force feedback and card readers.
 
 ## What you need
 
@@ -34,13 +34,15 @@ The Wine DLLs come from [Gcenx/macOS_Wine_builds](https://github.com/Gcenx/macOS
 
 Click the game window so it has focus. Close it with its red button. Only run one game at a time.
 
-| Dark Awake control | Key |
-|---|---|
-| Move | Arrow keys |
-| Buttons 1-4 | Z, X, C, V |
-| Start | Return |
-| Test mode | T |
-| Test or service | Y, U |
+| Dark Awake control | Key | Gamepad (Xbox layout) |
+|---|---|---|
+| Move | Arrow keys | D-pad or left stick |
+| Buttons 1-4 | Z, X, C, V | A, B, X, Y |
+| Start | Return | Menu/Start |
+| Test mode | T | |
+| Test or service | Y, U | |
+
+Connect a gamepad before or during play. The helper uses the first one it finds. Other controllers may number their buttons differently.
 
 ## Why each piece is needed
 
@@ -56,7 +58,9 @@ Click the game window so it has focus. Close it with its red button. Only run on
 
 ## Adding a key layout
 
-Each line of a file in `profiles/` is `<virtual key> <byte> <mask>`. To find a game's inputs, run `OpenParrotInput.exe --probe` in the bottle while the game runs, then use the game's own input test screen.
+Each line of a file in `profiles/` is `<virtual key> <byte> <mask>`, or `pad <input> <byte> <mask>` for a gamepad, where `<input>` is `up`, `down`, `left`, `right` or a button number from 1 to 28. To find a game's inputs, run `OpenParrotInput.exe --probe` in the bottle while the game runs, then use the game's own input test screen.
+
+To find a controller's button numbers, press them during play and read the `pad:` lines in `drive_c/game/OpenParrotInput.log` in the bottle. The same log says which controller is in use, or nothing if none was found.
 
 ## Limits
 
