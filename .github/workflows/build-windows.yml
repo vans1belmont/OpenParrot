@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [x86, x64]
+        platform: [Win32, x64]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +27,9 @@ jobs:
 
       - name: Build
         run: |
+          # Each project's prebuild runs "if not exist output mkdir output", which
+          # races under /m and fails the build, so create the folder up front.
+          New-Item -ItemType Directory -Force build/bin/release/output | Out-Null
           msbuild OpenParrot.sln /m /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143 "/flp:logfile=msbuild-errors.log;errorsonly"
           $code = $LASTEXITCODE
           # Job logs require sign-in, so publish errors as annotations on the run page.
