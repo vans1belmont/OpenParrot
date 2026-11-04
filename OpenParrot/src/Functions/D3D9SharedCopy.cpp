@@ -28,6 +28,10 @@ static const GUID kProcessorServiceIid = { 0xfc51a552, 0xd5e7, 0x11d9, { 0xaf, 0
 
 static const int kLoggedFrames = 3;
 
+// Enough for the longest ID3D11 interfaces, plus the type data just before a vtable.
+static const size_t kVtableCopySlots = 256;
+static const size_t kVtablePrefixSlots = 4;
+
 struct SharedSurface
 {
 	HANDLE handle;
@@ -62,30 +66,71 @@ static void Log(const char* format, ...)
 	fflush(file);
 }
 
+// Stops at the first unreadable slot, since the real length of a vtable isn't known.
+static size_t CopySlots(void** source, void** destination, size_t count)
+{
+	size_t copied = 0;
+	__try
+	{
+		for (; copied < count; copied++)
+			destination[copied] = source[copied];
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
+	return copied;
+}
+
+// Native libraries such as D3DMetal keep their vtables where VirtualProtect can't reach,
+// so the object gets a private copy to dispatch through instead.
+static void** CloneVtable(void** vtable, int slot)
+{
+	const size_t total = kVtablePrefixSlots + kVtableCopySlots;
+	void** copy = new void*[total]();
+	const size_t copied = CopySlots(vtable - kVtablePrefixSlots, copy, total);
+	if (copied <= kVtablePrefixSlots + static_cast<size_t>(slot))
+	{
+		delete[] copy;
+		return nullptr;
+	}
+	return copy + kVtablePrefixSlots;
+}
+
 template <typename T>
 static void PatchVtable(void* object, int slot, T hook, T* original)
 {
 	void** vtable = *reinterpret_cast<void***>(object);
-	if (vtable[slot] == reinterpret_cast<void*>(hook))
+	void* current = vtable[slot];
+	if (current == reinterpret_cast<void*>(hook))
 		return;
 
-	// A second class would need its own original, and Wine shares these vtables.
-	if (*original != nullptr)
+	// One original is kept per slot, so a class with a different one can't be hooked.
+	if (*original != nullptr && reinterpret_cast<void*>(*original) != current)
 	{
 		Log("another vtable has slot %d unpatched", slot);
 		return;
 	}
 
 	DWORD oldProtect;
-	if (!VirtualProtect(&vtable[slot], sizeof(void*), PAGE_READWRITE, &oldProtect))
+	if (VirtualProtect(&vtable[slot], sizeof(void*), PAGE_READWRITE, &oldProtect))
 	{
-		Log("could not patch vtable slot %d (0x%X)", slot, GetLastError());
+		*original = reinterpret_cast<T>(current);
+		vtable[slot] = reinterpret_cast<void*>(hook);
+		VirtualProtect(&vtable[slot], sizeof(void*), oldProtect, &oldProtect);
 		return;
 	}
 
-	*original = reinterpret_cast<T>(vtable[slot]);
-	vtable[slot] = reinterpret_cast<void*>(hook);
-	VirtualProtect(&vtable[slot], sizeof(void*), oldProtect, &oldProtect);
+	void** clone = CloneVtable(vtable, slot);
+	if (clone == nullptr)
+	{
+		Log("could not copy the vtable for slot %d", slot);
+		return;
+	}
+
+	*original = reinterpret_cast<T>(current);
+	clone[slot] = reinterpret_cast<void*>(hook);
+	*reinterpret_cast<void***>(object) = clone;
+	Log("object %p has a private vtable for slot %d", object, slot);
 }
 
 static SharedSurface* FindByHandle(HANDLE handle)
